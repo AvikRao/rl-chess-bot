@@ -1,0 +1,22 @@
+{
+  "name": "rl-chess-bot",
+  "version": "1.0.0",
+  "description": "Discord bot for the Rocket League community chess server.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AvikRao/rl-chess-bot.git"
+  },
+  "author": "Avik Rao",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/AvikRao/rl-chess-bot/issues"
+  },
+  "homepage": "https://github.com/AvikRao/rl-chess-bot#readme",
+  "dependencies": {
+    "discord.js": "^12.3.1"
+  }
+}
