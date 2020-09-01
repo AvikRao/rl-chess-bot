@@ -68,13 +68,13 @@ client.on("message", (message) => {
     if (command === "move" && message.author == currentPlayer) {
         if (args.length < 1) return;
         let board = game.exportJson();
-        let move = args[0].replace(/x|\+|/gi, '');
+        let move = args[0].replace(/x|\+|#|/gi, '');
         let piece = move.slice(0, 1);
         let dest = move.slice(-2).toUpperCase();
         let start = '';
         let pawn = '';
 
-        console.log(move);
+        console.log("Your move: " + move);
 
         if (['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].includes(piece)) {
             pawn = piece.toUpperCase();
@@ -88,8 +88,8 @@ client.on("message", (message) => {
                 possibilities[key] = board.pieces[key].toUpperCase();
             }
         });
-        console.log(possibilities);
-        possibleStarts = Object.keys(possibilities).filter((key) => possibilities[key] === piece);
+        console.log("Possible pieces: " + JSON.stringify(possibilities));
+        let possibleStarts = Object.keys(possibilities).filter((key) => possibilities[key] === piece);
         if (possibleStarts.length > 1) {
             if (piece === 'P') {
                 for (let i = 0; i < possibleStarts.length; i++) {
@@ -132,7 +132,7 @@ client.on("message", (message) => {
                     let specify = move.slice(1, 2);
                     if (!isNaN(parseInt(specify))) {
 
-                        possibleStarts = Object.keys(possibilities).filter((key) => possibilities[key] === piece && parseInt(key.slice(1, 2)) === parseInt(specify));
+                        possibleStarts = Object.keys(possibilities).filter((key) => possibilities[key] === piece && parseInt(key.slice(1, 2)) == parseInt(specify));
 
                         if (possibleStarts.length > 1) {
                             message.reply(`Please specify your move with alphabetical file instead of numerical rank. (Ex. ${piece}cd1)`);
@@ -145,7 +145,7 @@ client.on("message", (message) => {
                         }
 
                     } else {
-                        possibleStarts = Object.keys(possibilities).filter((key) => possibilities[key] === piece && key.slice(1, 2) === specify);
+                        possibleStarts = Object.keys(possibilities).filter((key) => possibilities[key] === piece && key.slice(0, 1) == specify.toUpperCase());
 
                         if (possibleStarts.length > 1) {
                             message.reply(`Please specify your move with numerical rank instead of alphabetical file. (Ex. ${piece}2c1)`);
@@ -168,7 +168,54 @@ client.on("message", (message) => {
         }
 
         if (start.length === 2) {
+
             game.move(start, dest);
+            board = game.exportJson();
+
+            console.log("AI possible moves: " + JSON.stringify(game.moves()));
+
+            let aiMove = jsChess.aiMove(board, level);
+            console.log("AI move: " + JSON.stringify(aiMove));
+
+            start = Object.keys(aiMove)[0];
+            dest = aiMove[start];
+
+            let capture = false;
+            Object.keys(board.pieces).forEach((key) => {
+                if (dest == key) capture = true;
+            });
+
+
+            piece = board.pieces[start].toUpperCase();
+            if (piece === 'P') {
+                piece = start.slice(0, 1).toLowerCase();
+
+                if (!capture) dest = dest.slice(1, 2);
+
+            } else {
+
+                possibilities = [];
+                Object.keys(game.moves()).forEach((key) => {
+                    if (game.moves()[key].includes(dest) && board.pieces[key].toUpperCase() === piece) {
+                        possibilities.push(key);
+                    }
+                });
+
+                if (possibilities.length > 1) {
+                    if (possibilities[0].slice(0, 1) == possibilities[1].slice(0, 1)) piece += start.slice(1, 2);
+                    else if (possibilities[0].slice(1, 2) == possibilities[1].slice(1, 2)) piece += start.slice(0, 1).toLowerCase();
+                }
+            }
+
+            move = piece + (capture ? 'x' : '') + dest.toLowerCase();
+            console.log("AI move algebraic: " + move);
+            game.move(start, aiMove[start])
+
+            message.reply(move);
+
+            console.log("Possible your moves:" + JSON.stringify(game.moves()));
+
+
         }
     }
 
