@@ -2,17 +2,21 @@ const Discord = require("discord.js");
 const auth = require("./auth.json");
 const readline = require("readline");
 const { Chess } = require('chess.js');
-require('typescript-require');
+
 var stockfish = require("stockfish");
 var engine;
 
+// command prefix
 const prefix = "!";
-var embed;
-var game;
 
 // channels
 const GENERAL = "704419428179378238";
 const TESTING = "749700627277545543";
+
+// global variables
+var embed;
+var game;
+var currentPlayer;
 
 const client = new Discord.Client();
 const rl = readline.createInterface({
@@ -26,7 +30,15 @@ function embedReset () {
     .setColor("#9400D3");
 }
 
-var currentPlayer;
+function resetGame () {
+    game.reset();
+    game = null;
+    currentPlayer = null;
+    engine.postMessage("quit");
+    engine = null;
+}
+
+
 
 client.login(auth.BOT_TOKEN);
 
@@ -91,7 +103,29 @@ client.on("message", async (message) => {
 
                 console.log(algebraic);
 
-                client.channels.cache.get(TESTING).send(algebraic, {reply: currentPlayer});
+                if (game.in_draw()) {
+
+                    let drawMethod;
+                    if (game.in_stalemate()) drawMethod = "stalemate";
+                    else if (game.in_threefold_repetition()) drawMethod = "threefold repetition";
+                    if (game.insufficient_material()) drawMethod = "insufficient material";
+
+                    resetGame();
+                    client.channels.cache.get(TESTING).send(algebraic + `. **Draw** by ${drawMethod}.`, {reply: currentPlayer});
+
+                } else if (game.in_checkmate()) {
+
+                    resetGame();
+                    client.channels.cache.get(TESTING).send(algebraic + ". **Checkmate!**", {reply: currentPlayer});
+
+                } else if (game.in_check()) {
+
+                    client.channels.cache.get(TESTING).send(algebraic + ". Check!", {reply: currentPlayer});
+
+                } else {
+
+                    client.channels.cache.get(TESTING).send(algebraic, {reply: currentPlayer});
+                }
 
             }
         }
@@ -136,8 +170,30 @@ client.on("message", async (message) => {
         }
 
         game.move(move, {sloppy: true});
-        engine.postMessage(`position fen ${game.fen()}`);
-        engine.postMessage("go depth 13");
+
+        if (game.in_draw()) {
+
+            let drawMethod;
+            if (game.in_stalemate()) drawMethod = "stalemate";
+            else if (game.in_threefold_repetition()) drawMethod = "threefold repetition";
+            if (game.insufficient_material()) drawMethod = "insufficient material";
+
+            resetGame();
+            client.channels.cache.get(TESTING).send(`**Draw** by ${drawMethod}.`, {reply: currentPlayer});
+
+        } else if (game.in_checkmate()) {
+
+            resetGame();
+            client.channels.cache.get(TESTING).send("**Checkmate!** You win. ", {reply: currentPlayer});
+
+        } else {
+
+            engine.postMessage(`position fen ${game.fen()}`);
+            engine.postMessage("go depth 13");
+
+        }
+
+        
 
     }
 
