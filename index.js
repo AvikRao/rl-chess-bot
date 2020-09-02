@@ -2,7 +2,7 @@ const Discord = require("discord.js");
 const auth = require("./auth.json");
 const readline = require("readline");
 
-const prefix = "!";
+const prefix = ".";
 
 const client = new Discord.Client();
 const rl = readline.createInterface({
