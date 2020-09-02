@@ -100,6 +100,11 @@ client.on("message", async (message) => {
                 game.move(bestmove, {sloppy: true});
 
                 let algebraic = game.history()[game.history().length - 1].toString();
+                let fen = game.fen();
+                let lastmove = game.history({verbose: true})[game.history().length - 1].from + game.history({verbose: true})[game.history().length - 1].to;
+
+                let pnglink = `https://backscattering.de/web-boardimage/board.png?fen=${encodeURIComponent(fen)}&lastMove=${encodeURIComponent(lastmove)}`;
+
 
                 console.log(algebraic);
 
@@ -111,20 +116,37 @@ client.on("message", async (message) => {
                     if (game.insufficient_material()) drawMethod = "insufficient material";
 
                     resetGame();
-                    client.channels.cache.get(TESTING).send(algebraic + `. **Draw** by ${drawMethod}.`, {reply: currentPlayer});
+                    client.channels.cache.get(TESTING).send(algebraic + `. **Draw** by ${drawMethod}.`, {reply: currentPlayer, embed: embed.setDescription(algebraic + `. **Draw** by ${drawMethod}.`).setImage(pnglink)});
 
                 } else if (game.in_checkmate()) {
 
                     resetGame();
-                    client.channels.cache.get(TESTING).send(algebraic + ". **Checkmate!**", {reply: currentPlayer});
+                    client.channels.cache.get(TESTING).send(algebraic + ". **Checkmate!**", {reply: currentPlayer, embed: embed.setDescription(algebraic + ". **Checkmate!**").setImage(pnglink)});
 
                 } else if (game.in_check()) {
 
-                    client.channels.cache.get(TESTING).send(algebraic + ". Check!", {reply: currentPlayer});
+                    let files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+                    let ranks  = ['1', '2', '3', '4', '5', '6', '7', '8'];
+
+                    let checksquare;
+
+                    for (let file = 0; file ++; file < 8) {
+                        for (let rank = 0; rank ++; rank < 8) {
+                            if (game.get(files[file]+ranks[rank]).type == 'k' && game.get(files[file]+ranks[rank]).color == game.turn()) {
+                                checksquare = files[file]+ranks[rank];
+                                break;
+                            }
+                        }
+                    }
+
+                    pnglink += `&check=${encodeURIComponent(checksquare)}`;
+
+                    client.channels.cache.get(TESTING).send(algebraic + ". Check!", {reply: currentPlayer, embed: embed.setDescription(algebraic + ". Check!").setImage(pnglink)});
 
                 } else {
 
-                    client.channels.cache.get(TESTING).send(algebraic, {reply: currentPlayer});
+                    client.channels.cache.get(TESTING).send(algebraic, {reply: currentPlayer, embed: embed.setDescription(algebraic).setImage(pnglink)});
+
                 }
 
             }
