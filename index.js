@@ -3,15 +3,16 @@ const auth = require("./auth.json");
 const readline = require("readline");
 const { Chess } = require('chess.js');
 require('typescript-require');
-
-var Stockfish = require("stockfish-native");
-var PATH_TO_STOCKFISH = "/home/pi/rl-chess-bot/stockfish-11-linux/src/stockfish";
+var stockfish = require("stockfish");
+var engine;
 
 const prefix = "!";
 var embed;
 var game;
 
-// /home/pi/rl-chess-bot/stockfish-11-linux/src/stockfish
+// channels
+const GENERAL = "704419428179378238";
+const TESTING = "749700627277545543";
 
 const client = new Discord.Client();
 const rl = readline.createInterface({
@@ -30,7 +31,7 @@ var currentPlayer;
 client.login(auth.BOT_TOKEN);
 
 rl.on('line', (input) => {
-    client.channels.cache.get("704419428179378238").send(input);
+    client.channels.cache.get(GENERAL).send(input);
 });
 
 client.on("message", async (message) => {
@@ -54,25 +55,53 @@ client.on("message", async (message) => {
             message.reply(
                 embed.setTitle("Missing Arguments")
                 .addField("Syntax", "!game [difficulty] [color]")
-                .addField("Difficulty", "**0:** Well-Trained Monkey | **1:** Beginner | **2:** Intermediate | **3:** Advanced")
+                .addField("Difficulty", "Value between 0 (Easiest) and 20 (Hardest)")
                 .addField("Color", "White | Black | Random")
                 );
             return;
 
-        } else if (![0, 1, 2, 3].includes(parseInt(args[0])) || !['white', 'black', 'random'].includes(args[1].toString().toLowerCase())) {
+        } else if (isNaN(parseInt(args[0])) || parseInt(args[0]) > 20 || parseInt(args[0]) < 0 || !['white', 'black', 'random'].includes(args[1].toString().toLowerCase())) {
 
             message.reply(
                 embed.setTitle("Invalid Arguments")
                 .addField("Syntax", "!game [difficulty] [color]")
-                .addField("Difficulty", "**0:** Well-Trained Monkey | **1:** Beginner | **2:** Intermediate | **3:** Advanced")
+                .addField("Difficulty", "Value between 0 (Easiest) and 20 (Hardest)")
                 .addField("Color", "White | Black | Random")
                 );
             return;
-
+ 
         }
 
         game = new Chess();
         currentPlayer = message.author;
+
+        engine = stockfish();
+
+        engine.onmessage = function onmessage(event) {
+
+            console.log(event);
+            console.log(typeof event)
+
+            if (typeof event == 'string' && event.toString().indexOf("bestmove") > -1) {
+                let line = event.split(" ");
+                let bestmove = line[line.indexOf("bestmove") + 1];
+                game.move(bestmove, {sloppy: true});
+
+                let algebraic = game.history()[game.history().length - 1].toString();
+
+                console.log(algebraic);
+
+                client.channels.cache.get(TESTING).send(algebraic, {reply: currentPlayer});
+
+            }
+        }
+
+        engine.postMessage("isready");
+        engine.postMessage("setoption name threads value 3");
+        engine.postMessage("setoption name hash value 1024");
+        engine.postMessage("setoption name ponder value false");
+        engine.postMessage(`setoption name skill level value ${args[0]}`);
+        engine.postMessage("position startpos");
 
         let color = args[1].toLowerCase();
 
@@ -81,10 +110,13 @@ client.on("message", async (message) => {
         }
 
         if (color == "white") {
-            game.header('White', currentPlayer.username, 'Black', 'RL Chess Bot (StockFish 11)');
-        } else if (color == "black") {
-            game.header('White', 'RL Chess Bot (StockFish 11)', 'Black', currentPlayer.username);
 
+            game.header('White', currentPlayer.username, 'Black', 'RL Chess Bot (StockFish 11)');
+
+        } else if (color == "black") {
+
+            game.header('White', 'RL Chess Bot (StockFish 11)', 'Black', currentPlayer.username);
+            engine.postMessage("go depth 13");
         }
 
         message.reply("New game started!");
@@ -104,6 +136,9 @@ client.on("message", async (message) => {
         }
 
         game.move(move, {sloppy: true});
+        engine.postMessage(`position fen ${game.fen()}`);
+        engine.postMessage("go depth 13");
+
     }
 
 
