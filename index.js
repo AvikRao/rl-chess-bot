@@ -22,6 +22,12 @@ rl.on('line', (input) => {
     client.channels.cache.get("704419428179378238").send(input);
 });
 
+const upperStandings = new Discord.MessageEmbed()
+	.setTitle('Upper Division Standings!');
+	
+
+
+
 client.on("message", (message) => {
     embedReset();
     if (message.author.bot) return;
@@ -34,5 +40,8 @@ client.on("message", (message) => {
     if (command === "ping") {
         const timeTaken = Date.now() - message.createdTimestamp;
             message.reply(`Pong! This message had a latency of ${timeTaken}ms.`);
+    }
+    if (command === "upper standings") {
+        channel.send(upperStandings);
     }
 });
