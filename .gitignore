@@ -1,5 +1,8 @@
 auth.json
 
+__MACOSX/
+stockfish-11-linux/
+
 # Logs
 logs
 *.log
